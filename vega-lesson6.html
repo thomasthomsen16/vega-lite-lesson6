@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite-api@5.6.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-tooltip"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@5"></script>
+    <title>Document</title>
+</head>
+<body>
+    <div id="view"></div>
+    <div id="view2"></div>
+    <div id="view3"></div>
+    <script>
+        // Setup API options
+        const options = {
+            config: {
+                // Vega-Lite default configuration
+            },
+            init: (view) => {
+                // Initialize tooltip handler
+                view.tooltip(new vegaTooltip.Handler().call);
+            },
+            view: {
+                // View constructor options
+                renderer: "canvas",
+            },
+        };
+      
+        // Register vega and vega-lite with the API
+        vl.register(vega, vegaLite, options);
+      
+        // Linking to Vega dataset
+        const dataSet1 = "https://raw.githubusercontent.com/vega/vega-datasets/refs/heads/main/data/cars.json";
+
+        // Define a point selection
+        const selection = vl.selectInterval()
+ 
+
+        // Create the visualization
+        vl.markCircle()
+            .data(dataSet1)
+            .params(selection)
+            .encode(
+                vl.x().fieldQ('Horsepower'),
+                vl.y().fieldQ('Miles_per_Gallon'),
+                vl.color().if(selection, vl.fieldO('Cylinders')).value('grey'),
+                vl.opacity().if(selection, vl.value(0.8)).value(0.1)
+            )
+            .render()
+            .then(viewElement => {
+                document.getElementById("view").appendChild(viewElement);
+            });
+        
+        // A new Vega-Lite specification
+        
+        const dataSet2 = "https://raw.githubusercontent.com/vega/vega-datasets/refs/heads/main/data/movies.json"
+
+        let genres = ["Action", "Adventure", "Black Comedy", "Comedy", "Concert/Performance", "Documentary", "Drama", "Horror", "Musical", "Romantic Comedy", "Thriller/Suspense", "Western"]
+
+        mpaa = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'Not Rated']
+        const selectGenre = vl.selectPoint('Select') // name the selection 'Select'
+        .fields("Major Genre", "MPAA Rating")          // limit selection to the Major_Genre field
+        .init({"Major Genre": genres[0], "MPAA Rating": "R"}) // use first genre entry as initial value
+        .bind({"Major Genre": vl.menu(genres), "MPAA Rating": vl.radio(mpaa)});
+
+        vl.markCircle()
+            .data(dataSet2)
+            .params(selectGenre)
+            .encode(
+                vl.x().fieldQ('Rotten Tomatoes Rating'),
+                vl.y().fieldQ('IMDB Rating'),
+                vl.tooltip().fieldN('Title'),
+                vl.opacity().if(selectGenre, vl.value(0.75)).value(0.05)
+            )
+            .render()
+            .then(viewElement =>{
+                document.getElementById("view2").appendChild(viewElement)
+            });
+        
+        // A new Vega-Lite specification with linked brushing between two charts
+
+        const brush = vl.selectInterval()
+            .encodings('x'); // limit selection to x-axis (year) values
+        
+        // dynamic query histogram
+        const years = vl.markBar({width: 4})
+            .data(dataSet2)
+            .params(brush)
+            .encode(
+                vl.x().year('Release Date').title('Films by Release Year'),
+                vl.y().count().title(null)
+            )
+            .width(600)
+            .height(50);
+        
+        // ratings scatter plot
+        const ratings = vl.markCircle()
+            .data(dataSet2)
+            .encode(
+                vl.x().fieldQ('Rotten Tomatoes Rating'),
+                vl.y().fieldQ('IMDB Rating'),
+                vl.tooltip().fieldN('Title'),
+                vl.opacity().if(brush, vl.value(0.75)).value(0.05)
+            )
+            .width(600)
+            .height(400);
+
+        // Render the two visualizations and concatenate them vertically
+
+        vl.vconcat(years,ratings)
+            .spacing(5)
+            .render()
+            .then(viewElement =>{
+                document.getElementById("view3").appendChild(viewElement)
+            });
+
+    </script>
+</body>
+</html>
